@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Arbitrage Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+
+        .controls {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .control-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        label {
+            font-weight: 600;
+            color: #333;
+        }
+
+        select, input {
+            padding: 8px 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+
+        .status {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .status-item {
+            display: inline-block;
+            margin-right: 20px;
+            font-size: 14px;
+        }
+
+        .status-label {
+            font-weight: 600;
+            color: #666;
+        }
+
+        .opportunities {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .opportunity-card {
+            padding: 20px;
+            border-bottom: 1px solid #e0e0e0;
+            transition: background 0.2s;
+        }
+
+        .opportunity-card:hover {
+            background: #f8f9fa;
+        }
+
+        .opportunity-card:last-child {
+            border-bottom: none;
+        }
+
+        .opportunity-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .crypto-pair {
+            font-size: 1.3em;
+            font-weight: 700;
+            color: #333;
+        }
+
+        .profit-badge {
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: 700;
+            font-size: 1.1em;
+        }
+
+        .profit-positive {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .exchange-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .exchange-box {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            border-left: 4px solid #667eea;
+        }
+
+        .exchange-name {
+            font-weight: 600;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .exchange-price {
+            font-size: 1.2em;
+            color: #333;
+        }
+
+        .exchange-label {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 3px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .no-opportunities {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .updating {
+            animation: pulse 1.5s infinite;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 Crypto Arbitrage Tracker</h1>
+            <p class="subtitle">Real-time arbitrage opportunities across major exchanges</p>
+        </header>
+
+        <div class="controls">
+            <div class="control-group">
+                <label for="minProfit">Min Profit %:</label>
+                <input type="number" id="minProfit" value="0.5" step="0.1" min="0">
+            </div>
+            <div class="control-group">
+                <label for="refreshInterval">Refresh (sec):</label>
+                <input type="number" id="refreshInterval" value="30" min="10" max="300">
+            </div>
+            <button id="refreshBtn">Refresh Now</button>
+            <button id="autoRefreshBtn">Auto-Refresh: OFF</button>
+        </div>
+
+        <div class="status">
+            <span class="status-item">
+                <span class="status-label">Last Update:</span>
+                <span id="lastUpdate">Never</span>
+            </span>
+            <span class="status-item">
+                <span class="status-label">Opportunities Found:</span>
+                <span id="oppCount">0</span>
+            </span>
+            <span class="status-item">
+                <span class="status-label">Status:</span>
+                <span id="statusText">Ready</span>
+            </span>
+        </div>
+
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div class="opportunities" id="opportunities">
+            <div class="loading">Click "Refresh Now" to start tracking arbitrage opportunities</div>
+        </div>
+    </div>
+
+    <script>
+        const EXCHANGES = {
+            binance: 'https://api.binance.com/api/v3/ticker/price',
+            coinbase: 'https://api.exchange.coinbase.com/products',
+            kraken: 'https://api.kraken.com/0/public/Ticker'
+        };
+
+        const PAIRS = ['BTC/USD', 'ETH/USD', 'BTC/USDT', 'ETH/USDT', 'SOL/USD', 'XRP/USD'];
+
+        let autoRefreshInterval = null;
+        let isAutoRefresh = false;
+
+        async function fetchBinancePrices() {
+            const response = await fetch(EXCHANGES.binance);
+            const data = await response.json();
+            const prices = {};
+            
+            data.forEach(item => {
+                const symbol = item.symbol;
+                if (symbol.endsWith('USDT')) {
+                    const base = symbol.slice(0, -4);
+                    prices[`${base}/USDT`] = parseFloat(item.price);
+                }
+            });
+            
+            return { exchange: 'Binance', prices };
+        }
+
+        async function fetchCoinbasePrices() {
+            const response = await fetch(EXCHANGES.coinbase);
+            const data = await response.json();
+            const prices = {};
+            
+            data.forEach(product => {
+                if (product.quote_currency === 'USD' || product.quote_currency === 'USDT') {
+                    const pair = `${product.base_currency}/${product.quote_currency}`;
+                    if (product.price) {
+                        prices[pair] = parseFloat(product.price);
+                    }
+                }
+            });
+            
+            return { exchange: 'Coinbase', prices };
+        }
+
+        async function fetchKrakenPrices() {
+            const response = await fetch(EXCHANGES.kraken + '?pair=BTCUSD,ETHUSD,XRPUSD,SOLUSD');
+            const data = await response.json();
+            const prices = {};
+            
+            const pairMap = {
+                'XXBTZUSD': 'BTC/USD',
+                'XETHZUSD': 'ETH/USD',
+                'XXRPZUSD': 'XRP/USD',
+                'SOLUSD': 'SOL/USD'
+            };
+            
+            for (const [key, value] of Object.entries(data.result || {})) {
+                const pair = pairMap[key];
+                if (pair && value.c) {
+                    prices[pair] = parseFloat(value.c[0]);
+                }
+            }
+            
+            return { exchange: 'Kraken', prices };
+        }
+
+        async function fetchAllPrices() {
+            try {
+                const results = await Promise.allSettled([
+                    fetchBinancePrices(),
+                    fetchCoinbasePrices(),
+                    fetchKrakenPrices()
+                ]);
+
+                return results
+                    .filter(r => r.status === 'fulfilled')
+                    .map(r => r.value);
+            } catch (error) {
+                console.error('Error fetching prices:', error);
+                return [];
+            }
+        }
+
+        function findArbitrageOpportunities(exchangeData, minProfit) {
+            const opportunities = [];
+            const pairPrices = {};
+
+            exchangeData.forEach(({ exchange, prices }) => {
+                Object.entries(prices).forEach(([pair, price]) => {
+                    if (!pairPrices[pair]) pairPrices[pair] = [];
+                    pairPrices[pair].push({ exchange, price });
+                });
+            });
+
+            Object.entries(pairPrices).forEach(([pair, exchanges]) => {
+                if (exchanges.length < 2) return;
+
+                exchanges.sort((a, b) => a.price - b.price);
+                const lowest = exchanges[0];
+                const highest = exchanges[exchanges.length - 1];
+
+                const profitPercent = ((highest.price - lowest.price) / lowest.price) * 100;
+
+                if (profitPercent >= minProfit) {
+                    opportunities.push({
+                        pair,
+                        buyExchange: lowest.exchange,
+                        buyPrice: lowest.price,
+                        sellExchange: highest.exchange,
+                        sellPrice: highest.price,
+                        profitPercent: profitPercent.toFixed(2)
+                    });
+                }
+            });
+
+            return opportunities.sort((a, b) => parseFloat(b.profitPercent) - parseFloat(a.profitPercent));
+        }
+
+        function displayOpportunities(opportunities) {
+            const container = document.getElementById('opportunities');
+            document.getElementById('oppCount').textContent = opportunities.length;
+
+            if (opportunities.length === 0) {
+                container.innerHTML = '<div class="no-opportunities">No arbitrage opportunities found above the minimum profit threshold.</div>';
+                return;
+            }
+
+            container.innerHTML = opportunities.map(opp => `
+                <div class="opportunity-card">
+                    <div class="opportunity-header">
+                        <div class="crypto-pair">${opp.pair}</div>
+                        <div class="profit-badge profit-positive">+${opp.profitPercent}%</div>
+                    </div>
+                    <div class="exchange-details">
+                        <div class="exchange-box">
+                            <div class="exchange-name">${opp.buyExchange}</div>
+                            <div class="exchange-price">$${opp.buyPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            <div class="exchange-label">BUY HERE</div>
+                        </div>
+                        <div class="exchange-box">
+                            <div class="exchange-name">${opp.sellExchange}</div>
+                            <div class="exchange-price">$${opp.sellPrice.toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2})}</div>
+                            <div class="exchange-label">SELL HERE</div>
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        async function refresh() {
+            const refreshBtn = document.getElementById('refreshBtn');
+            const statusText = document.getElementById('statusText');
+            const minProfit = parseFloat(document.getElementById('minProfit').value) || 0.5;
+
+            refreshBtn.disabled = true;
+            statusText.textContent = 'Fetching prices...';
+            statusText.classList.add('updating');
+
+            try {
+                const exchangeData = await fetchAllPrices();
+                
+                if (exchangeData.length === 0) {
+                    throw new Error('Failed to fetch data from any exchange');
+                }
+
+                const opportunities = findArbitrageOpportunities(exchangeData, minProfit);
+                displayOpportunities(opportunities);
+
+                document.getElementById('lastUpdate').textContent = new Date().toLocaleTimeString();
+                statusText.textContent = 'Active';
+            } catch (error) {
+                console.error('Refresh error:', error);
+                showError('Error fetching prices. Please try again.');
+                statusText.textContent = 'Error';
+            } finally {
+                refreshBtn.disabled = false;
+                statusText.classList.remove('updating');
+            }
+        }
+
+        function toggleAutoRefresh() {
+            const btn = document.getElementById('autoRefreshBtn');
+            const interval = parseInt(document.getElementById('refreshInterval').value) * 1000;
+
+            if (isAutoRefresh) {
+                clearInterval(autoRefreshInterval);
+                autoRefreshInterval = null;
+                isAutoRefresh = false;
+                btn.textContent = 'Auto-Refresh: OFF';
+                btn.style.background = '#667eea';
+            } else {
+                refresh();
+                autoRefreshInterval = setInterval(refresh, interval);
+                isAutoRefresh = true;
+                btn.textContent = 'Auto-Refresh: ON';
+                btn.style.background = '#28a745';
+            }
+        }
+
+        document.getElementById('refreshBtn').addEventListener('click', refresh);
+        document.getElementById('autoRefreshBtn').addEventListener('click', toggleAutoRefresh);
+    </script>
+</body>
+</html>
